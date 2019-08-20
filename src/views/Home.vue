@@ -93,6 +93,9 @@ export default class Home extends Vue {
   }
   mounted() {
     console.log("this", this);
+    if(!this.selectedSemester){
+      this.selectedSemester = this.semesters[this.semesters.length-1].value
+    }
   }
   private showingChangePassword() {
     console.log("showing change password");

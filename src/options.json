@@ -2,8 +2,10 @@
   {
     "text": "Fall 2019",
     "value": {
-      "url": "https://script.google.com/macros/s/AKfycbzjtwzEjBLgAF1v0pbZyTj_rTtqB21wwy9iCFZ5xXOSczFvy3Y/exec",
-      "classes": [{ "text": "Software Engineering", "value": "Grades" }]
+      "url": "https://script.google.com/a/blackburn.edu/macros/s/AKfycbxAg-fGeAEh8SjxGXGpZQYbT5Tk6hPe8jd1JGe7xA/exec",
+      "classes": [{ "text": "CS 210: Essentials of Computing", "value": "CS 210" },
+        { "text": "CS 220: Software and Information Systems", "value": "CS 220" },
+        { "text": "CS 372: Horizons of Computer Science", "value": "CS 372" }]
     }
   }
 ]
