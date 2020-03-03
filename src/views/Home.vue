@@ -1,15 +1,31 @@
 <template>
   <div class="home">
-    <div class="flex-row">
-      <b-form-select v-model="selectedSemester" :options="semesters" class="m-2">
+    <div class="flex-row mr-3">
+      <div>endpoint:</div>
+      <b-spinner
+        style="width:1.5em; height:1.5em;"
+        class="text-center"
+        variant="primary"
+        label="Spinning"
+        v-if="loading"
+      ></b-spinner>
+      <b-form-select
+        v-model="selectedEndpoint"
+        :options="endpoints"
+        class="m-2"
+        v-on:change="endpointChanged"
+      >
         <template slot="first">
-          <option :value="null" disabled>-- Select Semester --</option>
+          <option :value="null" disabled>-- Select SpreadSheet --</option>
         </template>
       </b-form-select>
+      <b-button v-b-modal.modal-new-endpoint variant="success" @click="handleNewEndpoint">New</b-button>
+    </div>
+    <div class="flex-row">
       <b-form-select
-        :disabled="!selectedSemester"
+        :disabled="!selectedEndpoint"
         v-model="selectedClass"
-        :options="classes"
+        :options="sheets"
         class="m-2"
       >
         <template slot="first">
@@ -17,16 +33,22 @@
         </template>
       </b-form-select>
     </div>
-    <hr>
+    <hr />
     <div class="flex-row">
       <b-form-input v-model="username" placeholder="username" class="m-2"></b-form-input>
-      <b-form-input v-model="psw" type="password" placeholder="password" class="m-2"></b-form-input>
-      <b-button v-b-modal.modal-1 @click="showingChangePassword">Change password</b-button>
+      <b-form-input
+        v-model="psw"
+        type="password"
+        placeholder="password"
+        class="m-2"
+        @keypress.enter="fetcher"
+      ></b-form-input>
+      <b-button v-b-modal.modal-1 @click="showingChangePassword" tabindex="100">Change password</b-button>
 
       <b-modal id="modal-1" title="BootstrapVue">
         Current Password
         <b-form-input v-model="curPass" type="password" placeholder="current password" class="m-2"></b-form-input>
-        <hr>New Password
+        <hr />New Password
         <b-form-input v-model="newPass" type="password" placeholder="new password" class="m-2"></b-form-input>
         <b-form-input
           v-model="confirmNewPass"
@@ -36,6 +58,26 @@
         ></b-form-input>
 
         <b-button @click="changePassword">{{changePasswordText}}</b-button>
+        <b-alert v-if="modalMessage" show :variant="modalMessageStyle">{{modalMessage}}</b-alert>
+      </b-modal>
+      <b-modal id="modal-new-endpoint" title="BootstrapVue">
+        New Endpoint:
+        <b-form-input
+          v-model="newEndpoint"
+          type="text"
+          placeholder="new endpoint INCLUDE https://.."
+          class="m-2"
+        ></b-form-input>
+        <div class="flex-row">
+          <b-button @click="testEndPoint">Test</b-button>
+        </div>
+        <div>New endpoint name: {{newEndpointName}}</div>
+
+        <div>
+          Sheets:
+          <div v-for="item in newEndpointSheets" :key="item">{{ item }}</div>
+        </div>
+        <b-button :disabled="newEndpointSheets.length < 1" @click="addNewEndpoint">Confirm</b-button>
         <b-alert v-if="modalMessage" show :variant="modalMessageStyle">{{modalMessage}}</b-alert>
       </b-modal>
     </div>
@@ -55,6 +97,7 @@ import GradeViewer from "@/views/GradeViewer.vue";
 
 import options from "@/options.json";
 console.log("options are:", options);
+const sout = console.log;
 @Component({
   components: {
     GradeViewer
@@ -62,19 +105,45 @@ console.log("options are:", options);
 })
 export default class Home extends Vue {
   private semesters = options;
-
+  selectedEndpoint: any = null;
+  endpoint: string = "";
+  endpoints: any[] = [];
+  loading: boolean = false;
+  get selectedObject() {
+    return this.endpoints.find(x => x.endpoint == this.selectedEndpoint);
+  }
+  get sheets() {
+    const so = this.selectedObject;
+    return (so && so.sheets) || [];
+  }
   private get classes() {
     return (this.selectedSemester && this.selectedSemester.classes) || [];
   }
-  // [
-  //   { value: null, disabled: true, text: "Please select a semester" },
-  //   { value: "Fall 2019", text: "Fall 2019" }
-  // ];
-  // private classes = [
-  //   { value: null, disabled: true, text: "Please select a class" },
-  //   { value: "Grades", text: "Software Engineering" }
-  // ];
-
+  newEndpoint: string = "";
+  newEndpointName: string = "";
+  newEndpointSheets: string[] = [];
+  newEndpointResponse: any = null;
+  addNewEndpoint() {
+    if (this.newEndpointResponse) {
+      this.addEndpoint(this.newEndpointResponse);
+    }
+  }
+  testEndPoint(x: any) {
+    fetch(`${this.newEndpoint}?name=true&list=true`, { method: "GET" })
+      .then(response => {
+        return response.json();
+      })
+      .then(data => {
+        data.endpoint = this.newEndpoint;
+        data.text = data.name; // + " (" + data.endpoint + ")";
+        data.value = this.newEndpoint;
+        this.newEndpointResponse = data;
+        this.newEndpointName = data.name;
+        this.newEndpointSheets = data.sheets;
+        this.addEndpoint(data);
+        console.log(data);
+      });
+  }
   private curPass: string = "";
   private newPass: string = "";
   private confirmNewPass: string = "";
@@ -91,8 +160,88 @@ export default class Home extends Vue {
   private get hashed(): string {
     return md5(this.psw) as string;
   }
+  handleNewEndpoint(idk: any) {
+    //show modal.
+  }
   mounted() {
     console.log("this", this);
+    sout("setting options");
+    this.setOptions();
+    this.setEndpoint();
+  }
+  endpointChanged(x: any) {
+    sout("endpoint changed!", x, this.selectedEndpoint);
+    this.saveOptionsAndSelection();
+  }
+  saveOptionsAndSelection() {
+    sout("saving options and selection:", this.endpoints, this.endpoint);
+    localStorage.setItem("endpoints", JSON.stringify(this.endpoints));
+    localStorage.setItem("endpoint", JSON.stringify(this.selectedEndpoint));
+  }
+  setOptions() {
+    const r = localStorage.getItem("endpoints");
+    if (r) {
+      try {
+        this.endpoints = JSON.parse(r);
+        sout("read in endpoints:", this.endpoints);
+      } catch (e) {
+        sout("could not JSON parse endpoints!", e, r);
+      }
+    }
+    const selected = localStorage.getItem("endpoint");
+    if (selected) {
+      sout("selected was: ", selected);
+      try {
+        const r = this.endpoints.find(x => x.endpoint == selected);
+        if (r) {
+          sout("setting selected ep to ", selected);
+          this.selectedEndpoint = selected;
+        }
+      } catch (e) {
+        sout("could not parse selected endpoint", e, selected);
+      }
+    } else {
+      sout("selectedEndpoint was null", selected);
+      this.selectedEndpoint = null;
+    }
+  }
+  setEndpoint() {
+    //check if endpoint param given.
+    const x = new URL(location.href).searchParams.get("endpoint");
+    sout("mounted: ", x);
+    const newEP = x || "";
+    const me = this;
+    if (newEP) {
+      //fetch endpoint. a new one was given.
+      this.loading = true;
+      fetch(`${newEP}?name=true&list=true`, { method: "GET" })
+        .then(response => {
+          return response.json();
+        })
+        .then(data => {
+          data.endpoint = newEP;
+          data.text = data.name; // + " (" + data.endpoint + ")";
+          data.value = newEP;
+          me.loading = false;
+          this.addEndpoint(data);
+          console.log(data);
+        });
+      // this.selectedEndpoint = this.endpoint;
+    } else {
+      //no endpoint url given.
+    }
+  }
+  addEndpoint(data: any) {
+    //replace old ep with route if given.
+    const ep = data.endpoint;
+    const r = this.endpoints.find(x => x.endpoint.trim() == ep.trim());
+    if (r) {
+      //if ep exists, replace it with updated info.
+      this.endpoints.splice(this.endpoints.indexOf(r), 1);
+    }
+    this.endpoints.push(data);
+    this.selectedEndpoint = (r || data).endpoint;
+    this.saveOptionsAndSelection();
   }
   private showingChangePassword() {
     console.log("showing change password");
@@ -139,7 +288,7 @@ export default class Home extends Vue {
       return;
     }
     this.changePasswordText = "please wait...";
-    const response = await postData(this.currentEndpoint, {
+    const response = await postData(this.selectedEndpoint, {
       oldpassword: oldPass,
       newpassword: newPass,
       class: this.selectedClass,
@@ -156,9 +305,7 @@ export default class Home extends Vue {
     }
     console.log("changed");
   }
-  get currentEndpoint(): string {
-    return (this.selectedSemester && this.selectedSemester.url) || "";
-  }
+
   public async fetcher() {
     const me = this;
     this.btnText = "fetching...";
@@ -169,7 +316,7 @@ export default class Home extends Vue {
     console.log(this.hashed);
     // return;
     const cls = this.selectedClass;
-    const endpoint = this.currentEndpoint;
+    const endpoint = this.selectedEndpoint;
     if (!endpoint || !cls) {
       console.error("no valid enpoint");
       me.message = "Please select semester/class";

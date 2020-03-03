@@ -12,6 +12,7 @@
       <h4 style="display:inline-block">{{gradeObject.Title}}</h4>
       <template v-if="showCat && gradeObject.Category">&nbsp;({{ gradeObject.Category}})</template>
     </template>
+    {{gradeObject.notes}}
     <h6 slot="footer" v-if="gradeObject.Date">{{gradeObject.Date.toLocaleDateString()}}</h6>
 
     <!-- {{ gradeObject }} -->
@@ -20,9 +21,9 @@
 
 <script lang="ts">
 import { Component, Prop, Vue } from "vue-property-decorator";
-
+const sout = console.log;
 @Component
-export default class HelloWorld extends Vue {
+export default class GradeDisplay extends Vue {
   @Prop() private gradeObject!: any;
   @Prop() private showCat!: boolean;
   @Prop() private colorScaled!: boolean;

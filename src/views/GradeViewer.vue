@@ -19,27 +19,28 @@
         :grade-object="slot2"
       />
     </div>
-
-    <b-tabs content-class="mt-3 left">
-      <b-tab title="All">
-        <GradeDisplay
-          v-for="gradeObj in grades"
-          :key="gradeObj.Title"
-          :show-cat="true"
-          :color-scaled="true"
-          :grade-object="gradeObj"
-        />
-      </b-tab>
-      <b-tab v-for="cat in categories" :title="cat" :key="cat">
-        <GradeDisplay
-          v-for="gradeObj in catFilter(cat)"
-          :key="gradeObj.Title"
-          :color-scaled="true"
-          :show-cat="true"
-          :grade-object="gradeObj"
-        />
-      </b-tab>
-    </b-tabs>
+    <div ref="tabs">
+      <b-tabs content-class="mt-3 left" v-model="tabIndex">
+        <b-tab title="All">
+          <GradeDisplay
+            v-for="gradeObj in grades"
+            :key="gradeObj.Title"
+            :show-cat="true"
+            :color-scaled="true"
+            :grade-object="gradeObj"
+          />
+        </b-tab>
+        <b-tab v-for="cat in categories" :title="cat" :key="cat">
+          <GradeDisplay
+            v-for="gradeObj in catFilter(cat)"
+            :key="gradeObj.Title"
+            :color-scaled="true"
+            :show-cat="true"
+            :grade-object="gradeObj"
+          />
+        </b-tab>
+      </b-tabs>
+    </div>
     <!-- <div class="grades">
       <div v-for="item in myGrades" :key="item.Title">{{ item.Title }}</div>
     </div>-->
@@ -54,6 +55,8 @@ import GradeDisplay from "@/components/GradeDisplay.vue";
 })
 export default class GradeViewer extends Vue {
   @Prop() private grades!: any[];
+  private touchCoords: [number, number] = [-1, -1];
+  private tabIndex: number = 0;
 
   get slot1(): any {
     return this.gradeSlot(1);
@@ -77,6 +80,48 @@ export default class GradeViewer extends Vue {
   mounted() {
     console.log("grade viewer is alive!");
     console.log(this.grades, "categories", JSON.stringify(this.categories));
+    this.setupTouchListeners();
+  }
+  setupTouchListeners() {
+    const someElement = this.$refs["tabs"] as HTMLElement;
+    console.log("somelement", someElement);
+    someElement.addEventListener("touchstart", this.process_touchstart, false);
+    // someElement.addEventListener("touchmove", this.process_touchmove, false);
+    someElement.addEventListener(
+      "touchcancel",
+      this.process_touchcancel,
+      false
+    );
+    someElement.addEventListener("touchend", this.process_touchend, false);
+  }
+  process_touchstart(ev: TouchEvent) {
+    console.log("touchstart", ev);
+    const t = ev.touches[0];
+    this.touchCoords = [t.clientX, t.clientY];
+  }
+
+  process_touchcancel(ev: TouchEvent) {
+    console.log("touchcancel", ev);
+  }
+  process_touchend(ev: TouchEvent) {
+    console.log("touchend", ev);
+    const t = ev.changedTouches[0];
+    const result = [t.clientX, t.clientY];
+    const xdiff = result[0] - this.touchCoords[0];
+    const ydiff = Math.abs(result[1] - this.touchCoords[1]);
+
+    if (Math.abs(xdiff) > 3 * ydiff) {
+      if (xdiff > 0) {
+        if (this.tabIndex == 0) {
+        } else {
+          this.tabIndex--;
+        }
+      } else {
+        if (this.tabIndex < this.categories.length - 1) {
+          this.tabIndex++;
+        }
+      }
+    }
   }
 }
 </script>
