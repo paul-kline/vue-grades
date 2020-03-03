@@ -11,10 +11,11 @@
     <template slot="header">
       <h4 style="display:inline-block">{{gradeObject.Title}}</h4>
       <template v-if="showCat && gradeObject.Category">&nbsp;({{ gradeObject.Category}})</template>
+      <div v-if="gradeObject.Title_notes">{{gradeObject.Title_notes}}</div>
     </template>
     {{gradeObject.notes}}
     <h6 slot="footer" v-if="gradeObject.Date">{{gradeObject.Date.toLocaleDateString()}}</h6>
-
+    <div v-if="gradeObject.grade_notes">{{gradeObject.grade_notes}}</div>
     <!-- {{ gradeObject }} -->
   </b-card>
 </template>
